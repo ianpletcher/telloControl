@@ -4,32 +4,29 @@ import cv2
 import time
 import sys
 from ultralytics import YOLO
-import numpy as np
+from collections import OrderedDict
 import logging
 
 from app_state import AppState
 from ui import make_mouse_callback, draw_overlay
 from yolov8_inference import run_yolo_inference
 from ctrl import run_control_loop
+from review_footage import append_to_video_list
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Video frame config:
-FRAME_WIDTH = 960
-FRAME_HEIGHT = 720
+FRAME_WIDTH = 960 # Tello default camera width
+FRAME_HEIGHT = 720 # Tello default camera height
 FPS_TARGET = 30
 
 # YOLO model
 YOLO_MODEL = 'yolov8s.pt'
 
 # OpenCV window name
-WINDOW_NAME = 'Tello POC - Click to Track'
-
-
+WINDOW_NAME = 'Tello POC'
 
 def main():
-    app_state = AppState()
-    
     logging.info("Loading YOLOv8 model...")
     model = YOLO(YOLO_MODEL)
     logging.info(f"{YOLO_MODEL} loaded successfully!")
@@ -44,7 +41,23 @@ def main():
         logging.warning(f"Low battery!")
         
     tello.streamon()
+    
+    time.sleep(2)  # give stream time to initialize
+    
     frame_read = tello.get_frame_read()
+    
+    logging.info("Waiting for first frame...")
+    timeout = time.time() + 10.0
+    while frame_read.frame is None:
+        if time.time() > timeout:
+            logging.error("Timed out waiting for first frame. Check Tello WiFi connection.")
+            tello.streamoff()
+            tello.end()
+            sys.exit(1)
+        time.sleep(0.1)
+    logging.info("First frame received.")
+    
+    app_state = AppState()
     
     app_state.airborne = False
     
@@ -59,14 +72,23 @@ def main():
     
     logging.info(f"Running. T=takeoff, L=land, Q=Quit. Click box to track")
     
+    video = []
+    
     try:
+        count = 0
+        
         while True:
             raw = frame_read.frame
             if raw is None:
                 time.sleep(0.01)
                 continue
             
-            frame = cv2.resize(raw, (FRAME_WIDTH, FRAME_HEIGHT))
+            frame = cv2.resize(raw, (FRAME_WIDTH, FRAME_HEIGHT)) # Scaling to tello default resolution
+            
+            video.append(frame.copy())
+            
+            if count % 300 == 0:
+                logging.info(f"Running model on frame {count}") #Log ~every 10 seconds
             
             detections = run_yolo_inference(model, frame, app_state)
             
@@ -82,16 +104,23 @@ def main():
                     tracked_objects = app_state.tracker.update_all_detections(
                         detections, FRAME_WIDTH, FRAME_HEIGHT
                     )
+                app_state.tracked = OrderedDict(tracked_objects)
             
-            state = app_state.drone_state
+            with app_state.state_lock:
+                state = app_state.drone_state
             
             display = draw_overlay(frame.copy(), app_state.tracked, current_target, state, battery)
+            
+            if display is None:
+                logging.warning("Overlay skipped due to error.")
+                display = frame.copy()
             
             with app_state.frame_lock:
                 app_state.frame = frame
                 
             cv2.imshow(WINDOW_NAME, display)
             
+            # Refresh battery occasionally
             if int(time.time()) % 30 == 0:
                 try:
                     battery = tello.get_battery()
@@ -126,11 +155,17 @@ def main():
             elif key == ord('q') or key == 27:
                 logging.info("Quitting...")
                 break
+            
+            count += 1
+            append_to_video_list(video)
+            
     except KeyboardInterrupt:
         logging.info("Interrupted.")
         
     finally:
         app_state.stop_event.set()
+        logging.info("Stopping main loop...")
+        
         control_thread.join(timeout=2)
 
         if app_state.airborne:
@@ -148,17 +183,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-                
-                
-                
-    
-    
-    
-
-    
-    
-
-        
-    
-    
-    

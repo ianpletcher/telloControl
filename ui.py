@@ -58,13 +58,13 @@ def draw_overlay(frame, tracked, target_id, state, battery):
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, COLOR_HUD, 1, cv2.LINE_AA
             )
         
-        return frame
+    return frame
     
 def make_mouse_callback(app_state):
     def on_mouse(event, x, y, flags, param):
         if event != cv2.EVENT_LBUTTONDOWN:
             return
-        with app_state.traker_lock:
+        with app_state.tracker_lock:
             tracked = dict(app_state.tracked)
         with app_state.target_lock:
             for object_id, data in tracked.items():
@@ -73,7 +73,7 @@ def make_mouse_callback(app_state):
                     app_state.target_id = object_id
                 with app_state.state_lock:
                     app_state.drone_state = "TRACKING"
-                logging.info(f"Target selected: ID {object_id} ({data.get('label')})")
+                logging.info(f"Target acquired: ID {object_id} ({data.get('label')})")
                 return
             app_state.target_id = None
             with app_state.state_lock:

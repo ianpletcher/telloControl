@@ -6,7 +6,7 @@ import cv2 as cv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
+# Clone of droneControl project's centroid_tracker.py
 class CentroidTracker:
     def __init__(
         self,
@@ -28,8 +28,8 @@ class CentroidTracker:
 
         # Tentative tracks, keyed by tentative id with detection info dicts and hit counts
         self._tentative_objects = OrderedDict()  # Mapping tent ids to detection info dicts
-        self._tentative_hits    = OrderedDict()  # Mapping tent ids to consecutive hit counts
-        self._tentative_id_seq  = 0              # Negative ID sequence for tentative tracks to avoid collision with confirmed IDs
+        self._tentative_hits = OrderedDict()  # Mapping tent ids to consecutive hit counts
+        self._tentative_id_seq = 0              # Negative ID sequence for tentative tracks to avoid collision with confirmed IDs
 
 
         self.max_distance_ratio  = max_distance_ratio # Max distance from last centroid to consider a match, ratio of frame width
@@ -72,8 +72,8 @@ class CentroidTracker:
         unmatched_detection_cols = set(range(len(current_detections_info)))
 
         if self.tracked_objects:
-            confirmed_ids  = list(self.tracked_objects.keys()) 
-            predicted      = self._build_predicted_centroids(confirmed_ids, frame_width, frame_height)
+            confirmed_ids = list(self.tracked_objects.keys()) 
+            predicted = self._build_predicted_centroids(confirmed_ids, frame_width, frame_height)
             prev_centroids = np.array(predicted) # Predicted centroid vectors for confirmed tracks based on velocity
 
             distance = cdist(prev_centroids, input_centroids) # Distance matrix between predicted centroids and current detections
@@ -129,18 +129,18 @@ class CentroidTracker:
         still_unmatched_cols = filtered_unmatched
         
         if self._tentative_objects and unmatched_detection_cols: # Try to match if tentative tracks exist and unmatched detections remain
-            tent_ids       = list(self._tentative_objects.keys())
+            tent_ids = list(self._tentative_objects.keys())
             tent_centroids = np.array([
                 self._tentative_objects[tid]['centroid'] for tid in tent_ids
             ])
             unmatched_col_list = sorted(unmatched_detection_cols)
-            unmatched_input    = np.array([
+            unmatched_input = np.array([
                 current_detections_info[c]['centroid'] for c in unmatched_col_list
             ])
 
-            tent_dist  = cdist(tent_centroids, unmatched_input)
-            tent_rows  = tent_dist.min(axis=1).argsort()
-            tent_cols  = tent_dist.argmin(axis=1)[tent_rows]
+            tent_dist = cdist(tent_centroids, unmatched_input)
+            tent_rows = tent_dist.min(axis=1).argsort()
+            tent_cols = tent_dist.argmin(axis=1)[tent_rows]
 
             matched_tent_rows = set()
             matched_tent_cols = set()
@@ -152,11 +152,11 @@ class CentroidTracker:
                     continue
                 
                 # If a tentative track is close enough to a detection, consider it a hit
-                tent_id      = tent_ids[row]
+                tent_id = tent_ids[row]
                 original_col = unmatched_col_list[col]
 
                 self._tentative_objects[tent_id] = current_detections_info[original_col]
-                self._tentative_hits[tent_id]   += 1 # Update hit count for future promotion
+                self._tentative_hits[tent_id] += 1 # Update hit count for future promotion
 
                 logging.debug(
                     f"Tentative {tent_id} hit streak: "
@@ -365,7 +365,7 @@ class CentroidTracker:
         self._tentative_id_seq -= 1
         tid = self._tentative_id_seq
         self._tentative_objects[tid] = detection_info
-        self._tentative_hits[tid]    = 1
+        self._tentative_hits[tid] = 1
 
     def _promote_tentative(self, tent_id):
         """
@@ -376,7 +376,7 @@ class CentroidTracker:
         detection_info = self._tentative_objects.pop(tent_id)
         self._tentative_hits.pop(tent_id)
         new_id = self._get_next_id()
-        self.tracked_objects[new_id]    = detection_info
+        self.tracked_objects[new_id] = detection_info
         self.disappeared_frames[new_id] = 0 # Start with zero disappeared frames since it's just been confirmed
         self.colors[new_id] = detection_info.get('color', (0,0,0))
        
