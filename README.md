@@ -8,9 +8,9 @@ Camera &rarr; YOLOv8 inference &rarr; Centroid Tracker &rarr; OpenCV overlay gra
 
 ### Command Architecture: 
 
-OpenCV mouse input &rarr; Drone Control Loop &rarr; Velocity Command Computation &rarr; Drone Control Loop (tello library calls)
+OpenCV Mouse Callback &rarr; Drone Control Loop &rarr; Velocity Command Computation &rarr; Drone Control Loop (tello library calls)
 
-## Components: 
+## Rendering/Tracking Components: 
 
 ### Camera:
 
@@ -58,6 +58,14 @@ Lightweight version of *update_all_detections* that matches against only the tar
 ### OpenCV Graphics Rendering
 
 Bounding boxes with IDs and confidence, as well as an application state head-up display are rendered to the video stream. Each object in the tracked items ordered dict has its bounding box drawn to the frame using the OpenCV rectangle function. The head-up display shows the drone's state, current target ID, battery percentage, and the permissable commands to operate the drone.
+
+## Drone Command/Control Components
+
+### OpenCV Mouse Callback
+
+### Drone Control Loop
+
+### Velocity Command Computation
 
 ## Getting started:
 
