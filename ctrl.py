@@ -7,9 +7,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 # Control gains adapted from droneControl's DroneCommandController
 YAW_GAIN = -0.05 # error_x (px) -> yaw_rate (deg/s)
 UP_DOWN_GAIN = -0.05 # error_y (px) -> vertical_vel (cm/s)
-FORWARD_GAIN =  0.001 # area_error (px^2) -> forward_vel (cm/s)
-TARGET_AREA_RATIO =  0.08 # target bbox area as fraction of frame area
-VERTICAL_SETPOINT =  0.45 # normalized y setpoint (0=top, 1=bottom)
+FORWARD_GAIN = 0.001 # area_error (px^2) -> forward_vel (cm/s)
+TARGET_AREA_RATIO = 0.08 # target bbox area as fraction of frame area
+VERTICAL_SETPOINT = 0.45 # normalized y setpoint (0=top, 1=bottom)
 
 MAX_YAW_RATE = 30 # deg/s
 MAX_VERTICAL_VEL = 40 # cm/s
@@ -97,7 +97,7 @@ def run_control_loop(tello, app_state):
                         tello.send_rc_control(0, fwd, vert, yaw)
 
             elif state == "HOVERING":
-                elapsed   = time.time() - app_state.hover_lost_time
+                elapsed = time.time() - app_state.hover_lost_time
                 remaining = HOVER_TIMEOUT - elapsed
 
                 if target_data is not None:
