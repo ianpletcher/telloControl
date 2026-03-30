@@ -24,7 +24,7 @@ CONTROL_RATE = 0.1 # seconds between control loop ticks (10 Hz)
 FRAME_WIDTH = 960
 FRAME_HEIGHT = 720
 
-def compute_velocity_commands(target_data, frame_width, frame_height):
+def compute_velocity_commands(target_data, frame_width, frame_height, app_state):
     bbox = target_data.get('bbox')
     if bbox is None:
         return 0, 0, 0, "HOVER (no bbox)!"
@@ -34,6 +34,10 @@ def compute_velocity_commands(target_data, frame_width, frame_height):
     cx = (x1 + x2) / 2
     cy = (y1 + y2) / 2
     area = (x2 - x1) * (y2 - y1)
+    
+    edge_proximity  = min(cx, frame_width - cx, cy, frame_height - cy) # Distance to nearest edge of the frame
+    if edge_proximity > app_state.tracker.edge_margin:
+        return (0, 0, 0, "Edge margin threshold exceeded.")
     
     frame_cx = frame_width / 2
     frame_cy = frame_height / 2
@@ -93,7 +97,7 @@ def run_control_loop(tello, app_state):
                     if app_state.airborne:
                         tello.send_rc_control(0, 0, 0, 0)
                 else:
-                    fwd, vert, yaw, cmd_str = compute_velocity_commands(target_data, fw, fh)
+                    fwd, vert, yaw, cmd_str = compute_velocity_commands(target_data, fw, fh, app_state)
                     if control_runtime_ds % 50 == 0: # log command strings every five seconds
                         logging.info(f"[TRACKING] {cmd_str}")
                     if app_state.airborne:
