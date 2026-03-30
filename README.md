@@ -1,16 +1,16 @@
 # Tello Drone Control with YOLOv8 Inference Model
 
-telloControl is a companion project to [droneControl](https://github.com/ianpletcher/droneControl) that integrates droneControl's main detection and tracking logic with the *djitellopy* Python library. The procedure involves receiving video, running and tracking detections, rendering graphics, and sending commands based on video stream from a DJI Tello drone.
+telloControl is a companion project to [droneControl](https://github.com/ianpletcher/droneControl) that integrates droneControl's main detection and tracking logic with the *djitellopy* Python library. The drone's operating procedure involves receiving video, running and tracking detections, rendering graphics, and sending commands based on video stream from a DJI Tello drone.
 
 ## High-Level Architecture:
 
 Camera &rarr; YOLOv8 inference &rarr; Centroid Tracker &rarr; OpenCV overlay graphics rendering
 
-### Command Architecture: 
+### Command Architecture:
 
 OpenCV Mouse Callback &rarr; Drone Control Loop &rarr; Velocity Command Computation &rarr; Drone Control Loop (tello library calls)
 
-## Rendering/Tracking Components: 
+## Rendering/Tracking Components:
 
 ### Camera:
 
@@ -63,9 +63,59 @@ Bounding boxes with IDs and confidence, as well as an application state head-up 
 
 ### OpenCV Mouse Callback
 
+The *make_mouse_callback* function waits for a left-click event. If the click is within the dimensions of a bounding box, the target id is updated to that box's object id. The drone's state is then set to "TRACKING". If an empty space is clicked, the target is cleared.
+
 ### Drone Control Loop
 
+The control loop waits for an app shutdown event to occur. The drone's operation can exist in one of the four following states:
+
+["MANUAL], ["TRACKING"], ["HOVERING"], ["RETURNING"]
+
+The control loop sets states and executes commands based on the following logic:
+
+If the drone's state is set to "MANUAL":
+- If the drone is in the air, a blank rc control message is sent to the Tello (0, 0, 0, 0). 
+
+If the drone's state is set to "TRACKING": 
+- If there is no target selected, the target is cleared and the state is returned to "MANUAL". 
+- If a target has been selected but lacks detection data (i.e. target has been lost), the drone's state is set to "HOVERING".
+    - If the drone is airborne, a blank rc control message is sent to the Tello (0, 0, 0, 0)
+- If a target has been selected and there is detection data, the *compute_velocity_command* function is called.
+    - If the drone is airborne, the resulting rc control messsage is sent to the Tello.
+
+If the drone's state is set to "HOVERING":
+The elapsed time since the target was lost is tracked.
+The maximum allowed hover timeout is compared with elapsed time.
+- If target data repopulates, the drone is returned to "TRACKING".
+- If elapsed time surpasses the amount permitted by HOVER_TIMEOUT, the drone's state is set to "RETURNING".
+    - If the drone is airborne, a blank rc control message is sent to the Tello (0, 0, 0, 0).
+- If elapsed time is still within the HOVER_TIMEOUT threshold:
+    - If the drone is airborne, a blank rc control message is sent to the drone until either:
+        - Target is reacquired *OR*
+        - Elapsed time surpasses HOVER_TIMEOUT threshold.
+
+If the drone's state is set to "RETURNING":
+The elapsed time since the HOVER_TIMEOUT threshold was surpassed is tracked.
+- If elapsed time surpasses the RETURN_HOLD_DURATION threshold, the drone's state is set to "MANUAL".
+
+There is only one case where nonempty commmands are sent to the Tello: If the drone is in "TRACKING" mode, a target is selected, and there is detection data in the *tracked* Ordered Dict corresponding to the target. Otherwise, no commands or blank rc controls are relayed to the Tello.
+
 ### Velocity Command Computation
+
+The *compute_velocity_commands* function takes in *target_data*, *frame_width*, and *frame_height*. The target bounding box centroid and frame centroid are computed, and the target area is computed as a fraction of the frame size.
+
+The distance between the frame centroid and the target centroid is used in dimensional components to determine values for axis-designated commands. Directional distances have the following correspondences:
+
+- YAW : Horizontal distance between frame centroid and target centroid (LEFT-RIGHT)
+- VERT: Vertical distance between frame centroid and target centroid (UP-DOWN)
+- FWD: Difference in target bbox area and frame area (FORWARD)
+
+Each of these values are clamped using *np.clip* to predefined maximum and minimum. This is to avoid cases where, due to faulty detection or other errors, a command parameter that is too extreme is communicated to the Tello. Additionally, the *YAW* and *VERT* components are tested against the DEADBAND_PX threshold to ensure that small distances between frames do not cause erratic motion.
+
+These values are used to send an rc control message to the Tello in the format:
+(0, fwd, vert, yaw)
+
+*Note that we default to yaw rather than left-right to avoid potential mismatches or redundant computation.
 
 ## Getting started:
 
