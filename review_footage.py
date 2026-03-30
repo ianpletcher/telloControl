@@ -28,4 +28,7 @@ def review_footage(frames):
     except KeyboardInterrupt:
         logging.info("Interrupted.")
     finally:
-        cv2.destroyWindow('Review Footage')  
+        cv2.destroyWindow('Review Footage')
+
+if __name__ == "__main__":
+    main()
