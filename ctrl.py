@@ -2,6 +2,8 @@ import numpy as np
 import logging
 import time
 
+from main import main
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Control gains adapted from droneControl's DroneCommandController
@@ -58,7 +60,7 @@ def compute_velocity_commands(target_data, frame_width, frame_height):
 def run_control_loop(tello, app_state):
     logging.info("Control loop started.")
 
-    while not app_state.stop_event.is_set():
+    while not app_state.stop_event.is_set() and app_state.control_enabled.is_set():
         try:
             with app_state.state_lock:
                 state = app_state.drone_state
@@ -74,11 +76,27 @@ def run_control_loop(tello, app_state):
 
             if state == "MANUAL":
                 if app_state.airborne:
-                    tello.send_rc_control(0, 0, 0, 0)
+                    app_state.control_enabled.clear()
+                    tello.end()
+                    
+                    logging.info("Returning control to mobile app...")
+                    logging.info("Wait at least five (5) seconds before resuming tracking.")
+                    
+                    wait = 5
+                    
+                    while (wait >= 0):
+                        print('*')
+                        wait -= 1
+                    
+                    resume = ''
+                    while (resume.lower() != 'r'):
+                        resume = input("Enter 'R' to resume: ")
+                    resume_control(tello, app_state)
 
             elif state == "TRACKING":
                 if target_id is None:
                     with app_state.state_lock:
+                        tello.send_rc_control(0, 0, 0, 0)
                         app_state.drone_state = "MANUAL"
                     logging.info("[TRACKING] -> [MANUAL]: target cleared.")
 
@@ -136,4 +154,6 @@ def run_control_loop(tello, app_state):
 
     logging.info("Control loop stopped.")
     
-    
+def resume_control(tello, app_state):
+        main()
+        

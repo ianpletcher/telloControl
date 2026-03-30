@@ -30,4 +30,5 @@ class AppState:
         self.tracker_lock = threading.Lock()
         
         self.stop_event = threading.Event()
+        self.control_enabled = threading.Event()
         self.airborne = False
