@@ -130,7 +130,7 @@ def main():
             
             key = cv2.waitKey(1) & 0xFF
             
-            if key == ord('t') or key == ord('T'):
+            """ if key == ord('t') or key == ord('T'):
                 if not app_state.airborne:
                     logging.info("Takeoff.")
                     tello.takeoff()
@@ -143,9 +143,9 @@ def main():
                 with app_state.state_lock:
                     app_state.drone_state = "MANUAL"
                 with app_state.target_lock:
-                    app_state.target_id = None
+                    app_state.target_id = None """
                     
-            elif key == ord('c') or key == ord('C'):
+            if key == ord('c') or key == ord('C'):
                 with app_state.target_lock:
                     app_state.target_id = None
                 with app_state.state_lock:

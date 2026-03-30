@@ -69,9 +69,9 @@ def make_mouse_callback(app_state):
                 bbox = data.get('bbox')
                 if bbox and bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]:
                     app_state.target_id = object_id
-                with app_state.state_lock:
-                    app_state.drone_state = "TRACKING"
-                logging.info(f"Target acquired: ID {object_id} ({data.get('label')})")
+                    with app_state.state_lock:
+                        app_state.drone_state = "TRACKING"
+                    logging.info(f"Target acquired: ID {object_id} ({data.get('label')})")
                 return
             app_state.target_id = None
             with app_state.state_lock:
