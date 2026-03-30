@@ -57,6 +57,8 @@ def compute_velocity_commands(target_data, frame_width, frame_height):
 
 def run_control_loop(tello, app_state):
     logging.info("Control loop started.")
+    
+    control_runtime_ds = 0 # control loop runtime in deciseconds
 
     while not app_state.stop_event.is_set():
         try:
@@ -92,7 +94,8 @@ def run_control_loop(tello, app_state):
                         tello.send_rc_control(0, 0, 0, 0)
                 else:
                     fwd, vert, yaw, cmd_str = compute_velocity_commands(target_data, fw, fh)
-                    logging.debug(f"[TRACKING] {cmd_str}")
+                    if control_runtime_ds % 50 == 0: # log command strings every five seconds
+                        logging.info(f"[TRACKING] {cmd_str}")
                     if app_state.airborne:
                         # send_rc_control(left_right, fwd_back, up_down, yaw)
                         tello.send_rc_control(0, fwd, vert, yaw)
@@ -128,6 +131,8 @@ def run_control_loop(tello, app_state):
                         app_state.target_id = None
                     app_state.hold_start_time = None
                     logging.info("[RETURNING] -> [MANUAL].")
+                    
+            control_runtime_ds += 1 # Add 1 to running time
 
         except Exception as e:
             if not app_state.stop_event.is_set():

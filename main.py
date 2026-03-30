@@ -13,7 +13,7 @@ from yolov8_inference import run_yolo_inference
 from ctrl import run_control_loop
 from review_footage import append_to_video_list
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logging.basicConfig(filename = 'app.log', level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Video frame config:
 FRAME_WIDTH = 960 # Tello default camera width

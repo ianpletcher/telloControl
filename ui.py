@@ -45,9 +45,9 @@ def draw_overlay(frame, tracked, target_id, state, battery):
         
         hud_lines = [
             f"STATE: {state}"
-            f"TARGET: {target_id}"
-            f"BATTERY: {battery}"
-            "T = takeoff | L = land | C = clear | Q = quit"
+            f" TARGET: {target_id}"
+            f" BATTERY: {battery}"
+            " T = takeoff | L = land | C = clear | Q = quit"
         ]
         
         for i, line in enumerate(hud_lines):
@@ -72,12 +72,12 @@ def make_mouse_callback(app_state):
                     with app_state.state_lock:
                         app_state.drone_state = "TRACKING"
                     logging.info(f"Target acquired: ID {object_id} ({data.get('label')})")
-                return
+                    return
             app_state.target_id = None
             with app_state.state_lock:
                 app_state.drone_state = "MANUAL"
-                
             logging.info("Target cleared.")
+            return
     return on_mouse
                 
         
