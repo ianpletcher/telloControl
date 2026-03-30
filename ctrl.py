@@ -76,15 +76,14 @@ def run_control_loop(tello, app_state):
 
             if state == "MANUAL":
                 if app_state.airborne:
-                    app_state.control_enabled.clear()
-                    tello.end()
-                    
                     logging.info("Returning control to mobile app...")
                     logging.info("Wait at least five (5) seconds before resuming tracking.")
                     
-                    wait = 5
+                    wait = 50
                     
                     while (wait >= 0):
+                        tello.send_rc_control()
+                        time.sleep(0.1)
                         print('*')
                         wait -= 1
                     

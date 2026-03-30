@@ -70,8 +70,6 @@ def main():
     
     control_thread.start()
     
-    app_state.control_enabled.set()
-    
     logging.info(f"Running. T=takeoff, L=land, Q=Quit. Click box to track")
     
     video = []
