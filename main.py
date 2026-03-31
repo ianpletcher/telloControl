@@ -86,21 +86,20 @@ def main():
         while True:
             with app_state.frame_lock:
                 frame = app_state.frame
-            
             with app_state.state_lock:
                 state = app_state.drone_state
                 
             with app_state.target_lock:
                 current_target = app_state.target_id
+                
+            with app_state.tracker_lock:
+                tracked_snapshot = OrderedDict(app_state.tracked)
             
-            display = draw_overlay(frame.copy(), app_state.tracked, current_target, state, battery)
+            display = draw_overlay(frame.copy(), tracked_snapshot, current_target, state, battery)
             
             if display is None:
                 logging.warning("Overlay skipped due to error.")
                 display = frame.copy()
-            
-            with app_state.frame_lock:
-                app_state.frame = frame
                 
             cv2.imshow(WINDOW_NAME, display)
             
@@ -149,6 +148,7 @@ def main():
         logging.info("Stopping main loop...")
         
         control_thread.join(timeout=2)
+        inference_thread.join(timeout=2)
 
         if app_state.airborne:
             logging.info("Landing before exit...")

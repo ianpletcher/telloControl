@@ -27,9 +27,9 @@ class CentroidTracker:
         self.colors = OrderedDict() # Mapping confirmed tracks to color data from frame
 
         # Tentative tracks, keyed by tentative id with detection info dicts and hit counts
-        self._tentative_objects = OrderedDict()  # Mapping tent ids to detection info dicts
-        self._tentative_hits = OrderedDict()  # Mapping tent ids to consecutive hit counts
-        self._tentative_id_seq = 0              # Negative ID sequence for tentative tracks to avoid collision with confirmed IDs
+        self._tentative_objects = OrderedDict() # Mapping tent ids to detection info dicts
+        self._tentative_hits = OrderedDict() # Mapping tent ids to consecutive hit counts
+        self._tentative_id_seq = 0 # Negative ID sequence for tentative tracks to avoid collision with confirmed IDs
 
 
         self.max_distance_ratio  = max_distance_ratio # Max distance from last centroid to consider a match, ratio of frame width
@@ -192,7 +192,7 @@ class CentroidTracker:
             
         if target_id not in self.tracked_objects.keys():
             logging.info(f"Target {target_id} not found")
-            return self.tracker.update_all_detections(current_detections_info, frame_width, frame_height)
+            return self.update_all_detections(current_detections_info, frame_width, frame_height)
         
         max_distance = frame_width * self.max_distance_ratio
         tight_distance = frame_width * self.tight_distance_ratio
@@ -208,9 +208,10 @@ class CentroidTracker:
         px = int(np.clip(cx + vx * velocity_weight, 0, frame_width - 1))  
         py = int(np.clip(cy + vy * velocity_weight, 0, frame_height - 1))
         
-        predicted_centroid = np.array([[px, py]])
+        predicted_centroid = np.array([px, py])
+        predicted_centroid_2d = predicted_centroid.reshape(1, -1)
         
-        distance = cdist(predicted_centroid, input_centroids)
+        distance = cdist(predicted_centroid_2d, input_centroids)
         
         # Match testing with each current detection
         
@@ -233,10 +234,14 @@ class CentroidTracker:
             self.disappeared_frames[target_id] += 1
             if self.disappeared_frames[target_id] > self.max_disappeared_frames:
                 self._deregister(target_id)
+                logging.info(f"Target {target_id} deregistered after {self.max_disappeared_frames}")
+                return {}
             else:
                 vx, vy = self.velocities.get(target_id, (0, 0))
                 self.velocities[target_id] = (vx * self.velocity_decay, vy * self.velocity_decay)
-        
+        result = self.tracked_objects.get(target_id)
+        if result is None:
+            return {}
         return {target_id : self.tracked_objects[target_id]}
              
               

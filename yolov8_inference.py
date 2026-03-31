@@ -54,9 +54,11 @@ def run_inference_loop(model, frame_read, app_state, FRAME_WIDTH, FRAME_HEIGHT):
             
         current_target = None
         
+        with app_state.target_lock:
+            current_target = app_state.target_id
+        
         with app_state.tracker_lock:
             if app_state.target_id:
-                current_target = app_state.target_id
                 tracked_objects = app_state.tracker.update_target(
                     detections, current_target, FRAME_WIDTH, FRAME_HEIGHT
                 )

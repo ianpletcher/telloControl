@@ -29,7 +29,7 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     if bbox is None:
         return 0, 0, 0, "HOVER (no bbox)!"
     
-    x1, x2, y1, y2 = bbox
+    x1, y1, x2, y2 = bbox
     
     cx = (x1 + x2) / 2
     cy = (y1 + y2) / 2
@@ -49,12 +49,12 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     
     ea = target_area - area
     
+    if abs(ex) < DEADBAND_PX: ex = 0
+    if abs(ey) < DEADBAND_PX: ey = 0
+    
     ex_norm = ex / (frame_width / 2)
     ey_norm = ey / (frame_height / 2)
     ea_norm = ea / (frame_width * frame_height * TARGET_AREA_RATIO)
-    
-    if abs(ex) < DEADBAND_PX: ex = 0
-    if abs(ey) < DEADBAND_PX: ey = 0
     
     yaw  = float(np.clip(MAX_YAW_RATE * YAW_GAIN * ex_norm, -MAX_YAW_RATE, MAX_YAW_RATE))
     vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
