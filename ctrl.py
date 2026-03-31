@@ -5,15 +5,15 @@ import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Control gains adapted from droneControl's DroneCommandController
-YAW_GAIN = -0.05 # error_x (px) -> yaw_rate (deg/s)
-UP_DOWN_GAIN = -0.05 # error_y (px) -> vertical_vel (cm/s)
-FORWARD_GAIN =  0.001 # area_error (px^2) -> forward_vel (cm/s)
-TARGET_AREA_RATIO =  0.08 # target bbox area as fraction of frame area
+YAW_GAIN = -0.03 # error_x (px) -> yaw_rate (deg/s)
+UP_DOWN_GAIN = -0.03 # error_y (px) -> vertical_vel (cm/s)
+FORWARD_GAIN =  0.0005 # area_error (px^2) -> forward_vel (cm/s)
+TARGET_AREA_RATIO =  0.04 # target bbox area as fraction of frame area
 VERTICAL_SETPOINT =  0.45 # normalized y setpoint (0=top, 1=bottom)
 
-MAX_YAW_RATE = 30 # deg/s
-MAX_VERTICAL_VEL = 40 # cm/s
-MAX_FORWARD_VEL = 40 # cm/s
+MAX_YAW_RATE = 20 # deg/s
+MAX_VERTICAL_VEL = 20 # cm/s
+MAX_FORWARD_VEL = 20 # cm/s
 DEADBAND_PX = 20 # px, suppress commands when error is small
 
 # State machine timeouts
@@ -35,9 +35,9 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     cy = (y1 + y2) / 2
     area = (x2 - x1) * (y2 - y1)
     
-    edge_proximity  = min(cx, frame_width - cx, cy, frame_height - cy) # Distance to nearest edge of the frame
+    """ edge_proximity  = min(cx, frame_width - cx, cy, frame_height - cy) # Distance to nearest edge of the frame
     if edge_proximity > app_state.tracker.edge_margin:
-        return (0, 0, 0, "Edge margin threshold exceeded.")
+        return (0, 0, 0, "Edge margin threshold exceeded.") """
     
     frame_cx = frame_width / 2
     frame_cy = frame_height / 2
@@ -49,12 +49,16 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     
     ea = target_area - area
     
+    ex_norm = ex / (frame_width / 2)
+    ey_norm = ey / (frame_height / 2)
+    ea_norm = ea / (frame_width * frame_height * TARGET_AREA_RATIO)
+    
     if abs(ex) < DEADBAND_PX: ex = 0
     if abs(ey) < DEADBAND_PX: ey = 0
     
-    yaw  = float(np.clip(YAW_GAIN * ex, -MAX_YAW_RATE, MAX_YAW_RATE))
-    vert = float(np.clip(UP_DOWN_GAIN * ey, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
-    fwd  = float(np.clip(FORWARD_GAIN * ea, -MAX_FORWARD_VEL, MAX_FORWARD_VEL))
+    yaw  = float(np.clip(MAX_YAW_RATE * YAW_GAIN * ex_norm, -MAX_YAW_RATE, MAX_YAW_RATE))
+    vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
+    fwd  = float(np.clip(MAX_FORWARD_VEL * FORWARD_GAIN * ea_norm, -MAX_FORWARD_VEL, MAX_FORWARD_VEL))
 
     cmd_str = f"FWD={fwd:.0f}cm/s | VERT={vert:.0f}cm/s | YAW={yaw:.0f}°/s"
     return int(fwd), int(vert), int(yaw), cmd_str

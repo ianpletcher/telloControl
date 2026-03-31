@@ -9,9 +9,9 @@ import logging
 
 from app_state import AppState
 from ui import make_mouse_callback, draw_overlay
-from yolov8_inference import run_yolo_inference
+from yolov8_inference import yolo_inference, run_inference_loop
 from ctrl import run_control_loop
-from review_footage import append_to_video_list
+
 
 logging.basicConfig(filename = 'app.log', level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
@@ -65,49 +65,33 @@ def main():
     cv2.setMouseCallback(WINDOW_NAME, make_mouse_callback(app_state))
     
     control_thread = threading.Thread(
-        target=run_control_loop,args=(tello, app_state), daemon=True
+        target=run_control_loop, args=(tello, app_state), daemon=True
+    )
+    
+    inference_thread = threading.Thread(
+        target=run_inference_loop, args=(model, frame_read, app_state, FRAME_WIDTH, FRAME_HEIGHT),
+        daemon=True
     )
     
     control_thread.start()
+    inference_thread.start()
+    
+    while app_state.frame is None:
+        time.sleep(0.1)
     
     logging.info(f"Running. T=takeoff, L=land, Q=Quit. Click box to track")
     
-    video = []
     
     try:
-        count = 0
-        
         while True:
-            raw = frame_read.frame
-            if raw is None:
-                time.sleep(0.01)
-                continue
-            
-            frame = cv2.resize(raw, (FRAME_WIDTH, FRAME_HEIGHT)) # Scaling to tello default resolution
-            
-            video.append(frame.copy())
-            
-            if count % 300 == 0:
-                logging.info(f"Running model on frame {count}") #Log ~every 10 seconds
-            
-            detections = run_yolo_inference(model, frame, app_state)
-            
-            current_target = None
-            
-            with app_state.tracker_lock:
-                if app_state.target_id:
-                    current_target = app_state.target_id
-                    tracked_objects = app_state.tracker.update_target(
-                        detections, current_target, FRAME_WIDTH, FRAME_HEIGHT
-                    )
-                else:
-                    tracked_objects = app_state.tracker.update_all_detections(
-                        detections, FRAME_WIDTH, FRAME_HEIGHT
-                    )
-                app_state.tracked = OrderedDict(tracked_objects)
+            with app_state.frame_lock:
+                frame = app_state.frame
             
             with app_state.state_lock:
                 state = app_state.drone_state
+                
+            with app_state.target_lock:
+                current_target = app_state.target_id
             
             display = draw_overlay(frame.copy(), app_state.tracked, current_target, state, battery)
             
@@ -130,7 +114,7 @@ def main():
             
             key = cv2.waitKey(1) & 0xFF
             
-            """ if key == ord('t') or key == ord('T'):
+            if key == ord('t') or key == ord('T'):
                 if not app_state.airborne:
                     logging.info("Takeoff.")
                     tello.takeoff()
@@ -143,9 +127,9 @@ def main():
                 with app_state.state_lock:
                     app_state.drone_state = "MANUAL"
                 with app_state.target_lock:
-                    app_state.target_id = None """
+                    app_state.target_id = None
                     
-            if key == ord('c') or key == ord('C'):
+            elif key == ord('c') or key == ord('C'):
                 with app_state.target_lock:
                     app_state.target_id = None
                 with app_state.state_lock:
@@ -156,8 +140,6 @@ def main():
                 logging.info("Quitting...")
                 break
             
-            count += 1
-            append_to_video_list(video)
             
     except KeyboardInterrupt:
         logging.info("Interrupted.")

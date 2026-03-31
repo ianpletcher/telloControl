@@ -1,8 +1,14 @@
+import time
+import cv2
+import asyncio
+
+from collections import OrderedDict
+
 YOLO_CONFIDENCE = 0.35
 YOLO_CLASSES = [2, 5, 7, 0]
 MIN_BBOX_AREA = 2000
 
-def run_yolo_inference(model, frame, app_state):
+def yolo_inference(model, frame, app_state):
     results = model(frame, verbose=False, conf=YOLO_CONFIDENCE, classes=YOLO_CLASSES) # list of Results objects
     detections = []
     h, w = frame.shape[:2]
@@ -35,4 +41,31 @@ def run_yolo_inference(model, frame, app_state):
         })
 
     return detections
+
+def run_inference_loop(model, frame_read, app_state, FRAME_WIDTH, FRAME_HEIGHT):
+    while not app_state.stop_event.is_set():
+        raw = frame_read.frame
+        if raw is None:
+            time.sleep(0.01)
+            continue
         
+        frame = cv2.resize(raw, (FRAME_WIDTH, FRAME_HEIGHT))
+        detections = yolo_inference(model, frame, app_state)
+            
+        current_target = None
+        
+        with app_state.tracker_lock:
+            if app_state.target_id:
+                current_target = app_state.target_id
+                tracked_objects = app_state.tracker.update_target(
+                    detections, current_target, FRAME_WIDTH, FRAME_HEIGHT
+                )
+            else:
+                tracked_objects = app_state.tracker.update_all_detections(
+                    detections, FRAME_WIDTH, FRAME_HEIGHT
+                )
+            app_state.tracked = OrderedDict(tracked_objects)
+        
+        with app_state.frame_lock:
+            app_state.frame = frame
+    
