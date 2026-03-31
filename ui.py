@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 COLOR_CONFIRMED = (0, 220, 0) # Green bounding box for confirmed detections
 COLOR_TENTATIVE = (180, 180, 0) # Yellow bounding box for tentative detection trackss
 COLOR_TARGET = (0, 80, 255) # Red bounding box for selected target
-COLOR_HUD = (220, 220, 220)
+COLOR_HUD = (240, 240, 240)
 
 def draw_overlay(frame, tracked, target_id, state, battery):
     if target_id is None:
