@@ -1,7 +1,5 @@
 import time
 import cv2
-import asyncio
-
 from collections import OrderedDict
 
 YOLO_CONFIDENCE = 0.35
