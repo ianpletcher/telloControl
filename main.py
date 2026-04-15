@@ -101,6 +101,9 @@ def main():
                 logging.warning("Overlay skipped due to error.")
                 display = frame.copy()
                 
+            if time.time() - app_state.last_frame_time > 3.0:
+                logging.warning("Video stream stalled...")
+                
             cv2.imshow(WINDOW_NAME, display)
             
             # Refresh battery occasionally

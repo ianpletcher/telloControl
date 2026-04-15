@@ -14,7 +14,7 @@ VERTICAL_SETPOINT =  0.45 # normalized y setpoint (0=top, 1=bottom)
 MAX_YAW_RATE = 20 # deg/s
 MAX_VERTICAL_VEL = 20 # cm/s
 MAX_FORWARD_VEL = 20 # cm/s
-DEADBAND_PX = 20 # px, suppress commands when error is small
+DEADBAND_PX = 30 # px, suppress commands when error is small
 
 # State machine timeouts
 HOVER_TIMEOUT = 4.0 # seconds in HOVERING before RETURNING
@@ -57,11 +57,12 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     ea_norm = ea / (frame_width * frame_height * TARGET_AREA_RATIO)
     
     yaw  = float(np.clip(MAX_YAW_RATE     * YAW_GAIN     * ex_norm, -MAX_YAW_RATE,     MAX_YAW_RATE))
-    logging.info(f"Yaw: {yaw}")
     vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN  * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
-    logging.info(f"Vert: {vert}")
     fwd  = float(np.clip(MAX_FORWARD_VEL  * FORWARD_GAIN  * ea_norm, -MAX_FORWARD_VEL,  MAX_FORWARD_VEL))
-    logging.info(f"Fwd: {fwd}")
+    
+    logging.info(f"ex_norm={ex_norm:.3f} ey_norm={ey_norm:.3f} ea_norm={ea_norm:.3f} | "
+    f"FWD={fwd} VERT={vert} YAW={yaw}")
+    
     cmd_str = f"FWD={fwd:.0f}cm/s | VERT={vert:.0f}cm/s | YAW={yaw:.0f}°/s"
     return abs(round(fwd)), round(vert), round(yaw), cmd_str
 

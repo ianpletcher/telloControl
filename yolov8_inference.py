@@ -47,6 +47,8 @@ def run_inference_loop(model, frame_read, app_state, FRAME_WIDTH, FRAME_HEIGHT):
             time.sleep(0.01)
             continue
         
+        app_state.last_frame_time = time.time()
+        
         frame = cv2.resize(raw, (FRAME_WIDTH, FRAME_HEIGHT))
         detections = yolo_inference(model, frame, app_state)
             

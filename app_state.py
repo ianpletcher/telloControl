@@ -20,6 +20,7 @@ class AppState:
         self.drone_state = "MANUAL"
         
         self.frame = None
+        self.last_frame_time = 0.0
         self.tracked = OrderedDict()
         self.hover_lost_time = None
         self.hold_start_time = None
