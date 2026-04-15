@@ -6,9 +6,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 
 # Control gains adapted from droneControl's DroneCommandController
 YAW_GAIN = 1.0 # error_x (px) -> yaw_rate (deg/s)
-UP_DOWN_GAIN = 1.0 # error_y (px) -> vertical_vel (cm/s)
-FORWARD_GAIN = 0.3 # area_error (px^2) -> forward_vel (cm/s)
-TARGET_AREA_RATIO =  0.04 # target bbox area as fraction of frame area
+UP_DOWN_GAIN = 2.0 # error_y (px) -> vertical_vel (cm/s)
+FORWARD_GAIN = 1.0 # area_error (px^2) -> forward_vel (cm/s)
+TARGET_AREA_RATIO =  0.1 # target bbox area as fraction of frame area
 VERTICAL_SETPOINT =  0.45 # normalized y setpoint (0=top, 1=bottom)
 
 MAX_YAW_RATE = 20 # deg/s
@@ -57,11 +57,13 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     ea_norm = ea / (frame_width * frame_height * TARGET_AREA_RATIO)
     
     yaw  = float(np.clip(MAX_YAW_RATE     * YAW_GAIN     * ex_norm, -MAX_YAW_RATE,     MAX_YAW_RATE))
+    logging.info(f"Yaw: {yaw}")
     vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN  * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
+    logging.info(f"Vert: {vert}")
     fwd  = float(np.clip(MAX_FORWARD_VEL  * FORWARD_GAIN  * ea_norm, -MAX_FORWARD_VEL,  MAX_FORWARD_VEL))
-
+    logging.info(f"Fwd: {fwd}")
     cmd_str = f"FWD={fwd:.0f}cm/s | VERT={vert:.0f}cm/s | YAW={yaw:.0f}°/s"
-    return round(fwd), round(vert), round(yaw), cmd_str
+    return abs(round(fwd)), round(vert), round(yaw), cmd_str
 
 def run_control_loop(tello, app_state):
     logging.info("Control loop started.")
