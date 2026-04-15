@@ -11,6 +11,9 @@ COLOR_HUD = (240, 240, 240)
 def draw_overlay(frame, tracked, target_id, state, battery):
     if target_id is None:
         target_id = 'none'
+        
+    if tracked is None:
+        tracked = {0 : {}}
     
     for object_id, data in tracked.items():
         bbox = data.get('bbox')

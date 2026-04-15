@@ -9,7 +9,7 @@ import logging
 
 from app_state import AppState
 from ui import make_mouse_callback, draw_overlay
-from yolov8_inference import yolo_inference, run_inference_loop
+from yolov8_inference import run_inference_loop
 from ctrl import run_control_loop
 
 
