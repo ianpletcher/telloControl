@@ -8,12 +8,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 YAW_GAIN = 1.0 # error_x (px) -> yaw_rate (deg/s)
 UP_DOWN_GAIN = 2.0 # error_y (px) -> vertical_vel (cm/s)
 FORWARD_GAIN = 1.0 # area_error (px^2) -> forward_vel (cm/s)
-TARGET_AREA_RATIO =  0.08 # target bbox area as fraction of frame area
+GOAL_AREA_RATIO =  0.08 # target bbox area as fraction of frame area
 
 MAX_YAW_RATE = 20 # deg/s
 MAX_VERTICAL_VEL = 20 # cm/s
 MAX_FORWARD_VEL = 20 # cm/s
-DEADBAND_PX = 30 # px, suppress commands when error is small
+DEADBAND_PX = 20 # px, suppress commands when error is small
 
 # State machine timeouts
 HOVER_TIMEOUT = 4.0 # seconds in HOVERING before RETURNING
@@ -28,42 +28,49 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     if bbox is None:
         return 0, 0, 0, "HOVER (no bbox)!"
     
-    x1, y1, x2, y2 = bbox
+    x1, y1, x2, y2 = bbox # left, top, right, bottom
     
-    cx = (x1 + x2) / 2
-    cy = (y1 + y2) / 2
-    area = (x2 - x1) * (y2 - y1)
+    cx = (x1 + x2) / 2 # target centroid x coordinate
+    cy = (y1 + y2) / 2 # target centroid y coordinate
+    area = (x2 - x1) * (y2 - y1) # target bounding box area
     
-    """ edge_proximity  = min(cx, frame_width - cx, cy, frame_height - cy) # Distance to nearest edge of the frame
-    if edge_proximity > app_state.tracker.edge_margin:
-        return (0, 0, 0, "Edge margin threshold exceeded.") """
+    frame_cx = frame_width / 2 # frame centroid x coordinate
+    frame_cy = frame_height / 2 # frame centroid y coordinate
     
-    frame_cx = frame_width / 2
-    frame_cy = frame_height / 2
+    goal_area = frame_width * frame_height * GOAL_AREA_RATIO # Desired area of target as percentage of frame
     
-    target_area = frame_width * frame_height * TARGET_AREA_RATIO
+    ex = cx - frame_cx # Pixel-distance between frame centroid and target centroid in x direction
+    ey = cy - frame_cy # Pixel-distance between frame centroid and target centroid in y direction
     
-    ex = cx - frame_cx
-    ey = cy - frame_cy
+    ea = goal_area - area # Pixel-area difference between goal area and actual target bbox area
     
-    ea = target_area - area
+    edge_proximity_x = min(cx, frame_width - cx) # Distance from target centroid to closest vertical edge
+    edge_proximity_y = min(cy, frame_height - cy) # Distance from target centroid to closest horizontal edge
     
-    if abs(ex) < DEADBAND_PX: ex = 0
-    if abs(ey) < DEADBAND_PX: ey = 0
+    if edge_proximity_x < DEADBAND_PX: # If target is close to vertical edge, suppress x error to avoid erratic yaw commands
+        ex = 0
+    elif edge_proximity_y < DEADBAND_PX: # If target is close to horizontal edge, suppress y error to avoid erratic vertical commands
+        ey = 0
+    elif ea < 0 and (edge_proximity_x < DEADBAND_PX * 2 or edge_proximity_y < DEADBAND_PX * 2): # If target is larger than goal area and close to any edge, suppress area error to avoid aggressive forward commands
+        ea = 0
     
-    ex_norm = ex / (frame_width / 2)
-    ey_norm = ey / (frame_height / 2)
-    ea_norm = ea / (frame_width * frame_height)
+        
+    if abs(ex) < DEADBAND_PX: ex = 0 # Issue a 0 command in this direction if error is small enough, reducing erratic behavior
+    if abs(ey) < DEADBAND_PX: ey = 0 # Issue a 0 command in this direction if error is small enough, reducing erratic behavior
     
-    yaw  = float(np.clip(MAX_YAW_RATE * YAW_GAIN * ex_norm, -MAX_YAW_RATE, MAX_YAW_RATE))
-    vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
-    fwd  = float(np.clip(MAX_FORWARD_VEL * FORWARD_GAIN * ea_norm, -MAX_FORWARD_VEL, MAX_FORWARD_VEL))
+    ex_norm = ex / (frame_width / 2) # Normalized x error as a fraction of frame_width / 2, yielding a value in [-1, 1]
+    ey_norm = ey / (frame_height / 2) # Normalized y error as a fraction of frame_height / 2, yielding a value in [-1, 1]
+    ea_norm = ea / (frame_width * frame_height) # Normalized area error as a fraction of total frame area, yielding a value in [-1, 1]
+    
+    yaw  = float(np.clip(MAX_YAW_RATE * YAW_GAIN * ex_norm, -MAX_YAW_RATE, MAX_YAW_RATE)) # Yaw rate command in deg/s, clipped to max yaw rate
+    vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL)) # Vertical velocity command in cm/s, clipped to max vertical velocity
+    fwd  = float(np.clip(MAX_FORWARD_VEL * FORWARD_GAIN * ea_norm, -MAX_FORWARD_VEL, MAX_FORWARD_VEL)) # Forward velocity command in cm/s, clipped to max forward velocity
     
     logging.info(f"ex_norm={ex_norm:.3f} ey_norm={ey_norm:.3f} ea_norm={ea_norm:.3f} | "
     f"FWD={fwd} VERT={vert} YAW={yaw}")
     
     cmd_str = f"FWD={fwd:.0f}cm/s | VERT={vert:.0f}cm/s | YAW={yaw:.0f}°/s"
-    return round(fwd), round(vert), round(yaw), cmd_str
+    return round(fwd), round(vert), round(yaw), cmd_str # Return rounded integer commands for tello.send_rc_control, along with a string for logging
 
 def run_control_loop(tello, app_state):
     logging.info("Control loop started.")
