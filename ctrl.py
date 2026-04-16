@@ -56,9 +56,9 @@ def compute_velocity_commands(target_data, frame_width, frame_height, app_state)
     ey_norm = ey / (frame_height / 2)
     ea_norm = ea / (frame_width * frame_height * TARGET_AREA_RATIO)
     
-    yaw  = float(np.clip(MAX_YAW_RATE     * YAW_GAIN     * ex_norm, -MAX_YAW_RATE,     MAX_YAW_RATE))
-    vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN  * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
-    fwd  = float(np.clip(MAX_FORWARD_VEL  * FORWARD_GAIN  * ea_norm, -MAX_FORWARD_VEL,  MAX_FORWARD_VEL))
+    yaw  = float(np.clip(MAX_YAW_RATE * YAW_GAIN * ex_norm, -MAX_YAW_RATE, MAX_YAW_RATE))
+    vert = float(np.clip(MAX_VERTICAL_VEL * UP_DOWN_GAIN * ey_norm, -MAX_VERTICAL_VEL, MAX_VERTICAL_VEL))
+    fwd  = float(np.clip(MAX_FORWARD_VEL * FORWARD_GAIN * ea_norm, -MAX_FORWARD_VEL, MAX_FORWARD_VEL))
     
     logging.info(f"ex_norm={ex_norm:.3f} ey_norm={ey_norm:.3f} ea_norm={ea_norm:.3f} | "
     f"FWD={fwd} VERT={vert} YAW={yaw}")

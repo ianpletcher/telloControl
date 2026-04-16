@@ -136,7 +136,7 @@ Running this project requires the following dependencies (whole or components):
 
 ### Running the software:
 
-To run the software, first clone the repository at http://github.com/ianpletcher/telloControl. Power on the Tello drone, ensuring that there is sufficient battery life. Then, enter your PC's network settings and connect to the Tello's wifi broadcast (name like *"TELLOXXXX"*). Then, run the code in the python environment where the dependencies have been installed by entering: 
+To run the software, first clone the repository at http://github.com/ianpletcher/telloControl. Enter the repository. Power on the Tello drone, ensuring that there is sufficient battery life. Then, enter your PC's network settings and connect to the Tello's wifi broadcast (name like *"TELLOXXXX"*). Then, run the code in the python environment where the dependencies have been installed by entering: 
 
 ```bash
 python3 main.py
@@ -149,15 +149,3 @@ Bounding boxes will appear around confirmed detections, where a detected object 
 - T: Takeoff
 - L: Land
 - Q/Esc: Quit
-
-### Video Player:
-
-Each run of *main.py* saves videos to the *videos* list in *review_footage.py*. You can run:
-
-```bash
-python3 review_footage.py
-```
-
-To review video data taken from the Tello*.
-
-*Testing needed.
